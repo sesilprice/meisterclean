@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f1923">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MeisterClean">
+<title>MeisterClean</title>
+
+<!-- Generate App Icon via Canvas -->
+<script>
+function generateIcon(size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  // Background with rounded feel
+  const r = size * 0.22;
+  ctx.beginPath();
+  ctx.moveTo(r, 0); ctx.lineTo(size-r, 0);
+  ctx.quadraticCurveTo(size, 0, size, r);
+  ctx.lineTo(size, size-r);
+  ctx.quadraticCurveTo(size, size, size-r, size);
+  ctx.lineTo(r, size);
+  ctx.quadraticCurveTo(0, size, 0, size-r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  // Dark gradient bg
+  const grad = ctx.createLinearGradient(0, 0, size, size);
+  grad.addColorStop(0, '#0f1923');
+  grad.addColorStop(1, '#1a3040');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Green circle
+  ctx.beginPath();
+  ctx.arc(size/2, size*0.44, size*0.28, 0, Math.PI*2);
+  ctx.strokeStyle = '#00c896';
+  ctx.lineWidth = size * 0.06;
+  ctx.stroke();
+  // Broom emoji
+  ctx.font = `${size*0.38}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🧹', size/2, size*0.44);
+  // "MC" text below
+  ctx.font = `bold ${size*0.13}px Arial`;
+  ctx.fillStyle = '#00c896';
+  ctx.letterSpacing = '2px';
+  ctx.fillText('MEISTERCLEAN', size/2, size*0.82);
+  return c.toDataURL('image/png');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Generate icons
+  const icon192 = generateIcon(192);
+  const icon512 = generateIcon(512);
+
+  // Apple touch icon (shows on iOS home screen)
+  const appleIcon = document.createElement('link');
+  appleIcon.rel = 'apple-touch-icon';
+  appleIcon.href = generateIcon(180);
+  document.head.appendChild(appleIcon);
+
+  // PWA Manifest
+  const manifestData = {
+    name: "MeisterClean",
+    short_name: "MeisterClean",
+    description: "Gebäudereinigung – Zeiterfassung & mehr",
+    start_url: "./",
+    display: "standalone",
+    background_color: "#0f1923",
+    theme_color: "#00c896",
+    icons: [
+      { src: icon192, sizes: "192x192", type: "image/png" },
+      { src: icon512, sizes: "512x512", type: "image/png" }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifestData)], {type:'application/json'});
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+});
+</script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0f1923; --card: #1a2533; --accent: #00c896; --warn: #f5a623;
+    --danger: #e84040; --text: #e8f0fe; --muted: #7a8fa6; --border: #243447;
+    --green-dark: #005C40;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh; max-width: 430px; margin: 0 auto; overflow-x: hidden;
+    padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+  /* Header */
+  #header { padding: 20px 20px 12px; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid var(--border); background: var(--bg);
+    position: sticky; top: 0; z-index: 10; }
+  #header .logo-sub { font-size: 11px; color: var(--accent); letter-spacing: 2px; margin-bottom: 2px; }
+  #header .logo-main { font-size: 19px; font-weight: 800; }
+  #header .date { font-size: 12px; color: var(--muted); }
+
+  /* Content */
+  #content { padding-bottom: 100px; min-height: calc(100vh - 60px); }
+
+  /* Bottom Nav */
+  #nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px; background: var(--card);
+    border-top: 1px solid var(--border); display: flex;
+    padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px)); z-index: 100; }
+  .nav-btn { flex: 1; background: none; border: none; cursor: pointer; color: var(--muted);
+    display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; letter-spacing: 0.5px; }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); }
+
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 16px; margin-bottom: 12px; }
+  .section-label { color: var(--muted); font-size: 12px; letter-spacing: 1px; margin-bottom: 14px; }
+
+  /* Buttons */
+  .btn { border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
+    font-family: inherit; letter-spacing: 1px; }
+  .btn-accent { background: var(--accent); color: #fff; padding: 12px 28px; font-size: 14px; }
+  .btn-danger { background: var(--danger); color: #fff; padding: 12px 28px; font-size: 14px; }
+
+  /* Stamp button */
+  #stamp-btn { width: 160px; height: 160px; border-radius: 50%; font-weight: 700;
+    font-size: 15px; cursor: pointer; letter-spacing: 2px; transition: all 0.3s;
+    font-family: inherit; border: 3px solid var(--accent);
+    background: radial-gradient(circle, rgba(0,200,150,.2), rgba(0,200,150,.05));
+    color: var(--accent); box-shadow: 0 0 40px rgba(0,200,150,.27); }
+  #stamp-btn.active { border-color: var(--danger); background: radial-gradient(circle, rgba(232,64,64,.2), rgba(232,64,64,.05));
+    color: var(--danger); box-shadow: 0 0 40px rgba(232,64,64,.27); }
+  #stamp-btn:disabled { opacity: 0.6; cursor: wait; }
+
+  /* GPS card */
+  .gps-card { border-radius: 16px; padding: 20px; margin: 0 16px 20px; text-align: center; }
+
+  /* Checklist */
+  .check-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    margin-bottom: 10px; border-radius: 12px; cursor: pointer; transition: all .2s;
+    background: var(--card); border: 1px solid var(--border); }
+  .check-item.done { background: rgba(0,200,150,.1); border-color: var(--accent); }
+  .check-box { width: 24px; height: 24px; border-radius: 6px; border: 2px solid var(--muted);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    font-size: 14px; font-weight: 700; color: #fff; transition: all .2s; }
+  .check-box.checked { background: var(--accent); border-color: var(--accent); }
+  .progress-bar { background: var(--border); border-radius: 999px; height: 6px; margin-bottom: 20px; }
+  .progress-fill { background: var(--accent); height: 6px; border-radius: 999px; transition: width .4s; }
+
+  /* Steps */
+  .step-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(0,200,150,.15);
+    border: 1px solid var(--accent); color: var(--accent); font-weight: 700; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+  /* Toggle */
+  .toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--border);
+    position: relative; cursor: pointer; transition: background .3s; flex-shrink: 0; }
+  .toggle.on { background: var(--accent); }
+  .toggle-knob { width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    position: absolute; top: 3px; left: 3px; transition: left .3s; }
+  .toggle.on .toggle-knob { left: 23px; }
+
+  /* History item */
+  .hist-item { background: var(--card); border-radius: 12px; padding: 14px 16px;
+    margin-bottom: 10px; border: 1px solid var(--border); }
+
+  /* Tag */
+  .tag { display: inline-block; font-size: 10px; padding: 3px 10px; border-radius: 20px;
+    letter-spacing: 1px; margin-bottom: 6px; }
+
+  /* Back button */
+  .back-btn { background: none; border: none; color: var(--accent); font-size: 16px;
+    padding: 16px; cursor: pointer; font-family: inherit; }
+
+  /* Install banner */
+  #install-banner { background: linear-gradient(135deg, var(--green-dark), #007a5e);
+    padding: 12px 16px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border); }
+
+  /* Pulse animation */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  .pulse { animation: pulse 1.5s infinite; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div>
+    <div class="logo-sub">GEBÄUDEREINIGUNG</div>
+    <div class="logo-main">MeisterClean</div>
+  </div>
+  <div class="date" id="header-date"></div>
+</div>
+
+<div id="install-banner" style="display:none" id="pwa-hint">
+  <span style="font-size:22px">📲</span>
+  <div style="flex:1">
+    <div style="font-size:12px;font-weight:700;color:#fff">Als App installieren</div>
+    <div style="font-size:11px;color:rgba(255,255,255,.7)">Tippe auf Teilen → „Zum Home-Bildschirm"</div>
+  </div>
+  <button onclick="document.getElementById('install-banner').style.display='none'"
+    style="background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer">✕</button>
+</div>
+
+<div id="content"></div>
+
+<div id="nav">
+  <button class="nav-btn active" onclick="switchTab('time')" id="nav-time">
+    <div class="nav-icon">🕐</div>
+    <div class="nav-label">Stempeln</div>
+    <div class="nav-dot" id="dot-time"></div>
+  </button>
+  <button class="nav-btn" onclick="switchTab('check')" id="nav-check">
+    <div class="nav-icon">☑️</div>
+    <div class="nav-label">Checkliste</div>
+  </button>
+  <button class="nav-btn" onclick="switchTab('guide')" id="nav-guide">
+    <div class="nav-icon">📋</div>
+    <div class="nav-label">Anleitung</div>
+  </button>
+  <button class="nav-btn" onclick="switchTab('team')" id="nav-team">
+    <div class="nav-icon">👥</div>
+    <div class="nav-label">Team</div>
+  </button>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const LOCATIONS = [
+  { id: 1, name: "Natberger Straße 25, Bissendorf", lat: 52.2381, lng: 8.1612, radius: 200 }
+];
+
+const EMPLOYEES = [
+  { id: 1, name: "Maria K.",  role: "Reinigungskraft", active: true  },
+  { id: 2, name: "Stefan B.", role: "Vorarbeiter",      active: true  },
+  { id: 3, name: "Fatima A.", role: "Reinigungskraft", active: false },
+];
+
+const INSTRUCTIONS = [
+  { id:1, title:"Büroreinigung Standard", cat:"Büro", catColor:"#00c896",
+    steps:["Papierkorb leeren und Beutel wechseln","Staubsaugen (Teppich) oder fegen/wischen (Hartboden)",
+           "Schreibtische abwischen (nur freie Flächen)","Monitore und Telefone mit Mikrofasertuch reinigen",
+           "Fenster auf Fingerabdrücke prüfen","Türgriffe desinfizieren"] },
+  { id:2, title:"Sanitäranlagen", cat:"WC", catColor:"#f5a623",
+    steps:["Schutzhandschuhe anziehen","WC-Becken innen mit Reiniger behandeln",
+           "Waschbecken und Armaturen reinigen","Spiegel wischen",
+           "Boden desinfizieren","Seife und Papier nachfüllen","Papierkorb leeren"] },
+  { id:3, title:"Treppenhausreinigung", cat:"Allgemein", catColor:"#7a8fa6",
+    steps:["Von oben nach unten arbeiten","Geländer abwischen","Stufen fegen","Stufen feucht wischen","Eingangstür reinigen"] },
+];
+
+const CHECKLISTS = [
+  { id:1, title:"Tagescheck – Büro",
+    items:["Eingangshalle","Flure","Büros EG","Büros 1.OG","Küche","WC Damen","WC Herren"] },
+  { id:2, title:"Wochencheck",
+    items:["Fenster innen","Heizkörper","Lampen abstauben","Küchengeräte","Tiefenreinigung WC"] },
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let currentTab = 'time';
+let stampState = { stamped: false, startTime: null, elapsed: 0, nearbyLoc: null };
+let timer = null;
+let checkState = {};
+let employees = JSON.parse(JSON.stringify(EMPLOYEES));
+let history = JSON.parse(localStorage.getItem('mc_history') || '[]');
+if (!history.length) history = [
+  { date:"Mo, 21. Apr", in:"07:02", out:"15:31", h:"8:29", loc:"Natberger Str. 25, Bissendorf", gps:true },
+  { date:"Di, 22. Apr", in:"06:58", out:"15:00", h:"8:02", loc:"Natberger Str. 25, Bissendorf", gps:true },
+];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function getDistance(lat1,lng1,lat2,lng2) {
+  const R=6371000, dL=((lat2-lat1)*Math.PI)/180, dG=((lng2-lng1)*Math.PI)/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dG/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function nowTime() {
+  const d=new Date(); return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+}
+function fmtElapsed(s) {
+  return Math.floor(s/3600).toString().padStart(2,'0')+':'+
+         Math.floor((s%3600)/60).toString().padStart(2,'0')+':'+
+         (s%60).toString().padStart(2,'0');
+}
+function fmtHours(elapsed) {
+  const h=(elapsed/3600).toFixed(2); return h+'h';
+}
+function saveHistory() { localStorage.setItem('mc_history', JSON.stringify(history)); }
+
+// ── DATE HEADER ───────────────────────────────────────────────────────────────
+document.getElementById('header-date').textContent =
+  new Date().toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'});
+
+// ── PWA install hint (iOS) ────────────────────────────────────────────────────
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone = window.navigator.standalone;
+if (isIOS && !isStandalone) document.getElementById('install-banner').style.display='flex';
+
+// ── TAB SWITCHING ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  ['time','check','guide','team'].forEach(t => {
+    document.getElementById('nav-'+t)?.classList.toggle('active', t===tab);
+  });
+  render();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render() {
+  const c = document.getElementById('content');
+  if (currentTab==='time')  c.innerHTML = renderTime();
+  if (currentTab==='check') c.innerHTML = renderCheck();
+  if (currentTab==='guide') c.innerHTML = renderGuide();
+  if (currentTab==='team')  c.innerHTML = renderTeam();
+  attachEvents();
+}
+
+// ── TIME VIEW ─────────────────────────────────────────────────────────────────
+let gpsStatus = 'idle'; // idle | checking | allowed | denied | error
+
+function renderTime() {
+  const st = stampState;
+  const btnClass = st.stamped ? 'active' : '';
+  const btnLabel = gpsStatus==='checking' ? '📡' : st.stamped ? 'STOP' : 'START';
+  const disabled = gpsStatus==='checking' ? 'disabled' : '';
+
+  let gpsCard = '';
+  if (gpsStatus==='checking') {
+    gpsCard = `<div class="gps-card pulse" style="background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.4)">
+      <div style="font-size:36px;margin-bottom:8px">📡</div>
+      <div style="color:var(--warn);font-weight:700;font-size:16px">GPS wird geprüft…</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:4px">Bitte warten</div>
+    </div>`;
+  } else if (gpsStatus==='allowed') {
+    gpsCard = `<div class="gps-card" style="background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.3)">
+      <div style="font-size:36px;margin-bottom:8px">✅</div>
+      <div style="color:var(--accent);font-weight:700;font-size:16px">Standort bestätigt</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:4px">${st.nearbyLoc?.name||''}</div>
+      <button class="btn btn-accent" style="margin-top:16px" onclick="doStamp()">${st.stamped?'AUSLOGGEN':'EINLOGGEN'}</button>
+    </div>`;
+  } else if (gpsStatus==='denied') {
+    gpsCard = `<div class="gps-card" style="background:rgba(232,64,64,.1);border:1px solid rgba(232,64,64,.3)">
+      <div style="font-size:36px;margin-bottom:8px">🚫</div>
+      <div style="color:var(--danger);font-weight:700;font-size:16px">Falscher Standort</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:4px">Du bist nicht am Objekt</div>
+      <button class="btn" style="background:var(--border);color:var(--text);padding:10px 24px;font-size:13px;margin-top:16px" onclick="checkGPS()">Erneut prüfen</button>
+    </div>`;
+  } else if (gpsStatus==='error') {
+    gpsCard = `<div class="gps-card" style="background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3)">
+      <div style="font-size:36px;margin-bottom:8px">⚠️</div>
+      <div style="color:var(--warn);font-weight:700;font-size:16px">GPS nicht verfügbar</div>
+      <div style="color:var(--muted);font-size:13px;margin-top:4px">Standortzugriff in den Einstellungen erlauben</div>
+      <button class="btn btn-accent" style="margin-top:16px" onclick="checkGPS()">Erneut versuchen</button>
+    </div>`;
+  }
+
+  const hint = (gpsStatus==='idle' && !st.stamped) ? `
+    <div style="margin:0 16px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="color:var(--muted);font-size:12px;line-height:1.7">
+        🔒 Beim Stempeln wird dein GPS-Standort geprüft.<br>
+        Einstempeln ist nur möglich, wenn du dich am Objekt befindest.
+      </div>
+    </div>` : '';
+
+  const timer_display = st.stamped ? `
+    <div style="margin-top:20px;color:var(--accent);font-size:32px;font-family:monospace;letter-spacing:4px" id="elapsed-display">
+      ${fmtElapsed(st.elapsed)}
+    </div>
+    <div style="color:var(--muted);font-size:12px;margin-top:6px">
+      📍 ${st.nearbyLoc?.name||'–'} · seit ${st.startTime} Uhr
+    </div>` : '';
+
+  const histItems = history.slice(0,5).map(h => `
+    <div class="hist-item">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:14px;font-weight:600">${h.date}</div>
+          <div style="color:var(--muted);font-size:12px;margin-top:2px">${h.in} – ${h.out} Uhr</div>
+          <div style="color:var(--muted);font-size:11px;margin-top:2px">📍 ${h.loc}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="color:var(--accent);font-size:18px;font-weight:700">${h.h}</div>
+          <div style="font-size:11px;margin-top:4px;color:${h.gps?'var(--accent)':'var(--danger)'}">${h.gps?'✓ GPS':'✗ GPS'}</div>
+        </div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div style="text-align:center;padding:28px 0 20px">
+      <div style="color:var(--muted);font-size:12px;margin-bottom:10px;letter-spacing:1px">
+        ${st.stamped ? 'ARBEITSZEIT LÄUFT' : 'GPS-GESICHERTE STEMPELUNG'}
+      </div>
+      <button id="stamp-btn" class="${btnClass}" ${disabled} onclick="onStampClick()">
+        ${btnLabel}
+      </button>
+      ${timer_display}
+    </div>
+    ${gpsCard}
+    ${hint}
+    <div style="padding:0 16px">
+      <div class="section-label">LETZTE EINTRÄGE</div>
+      ${histItems}
+    </div>`;
+}
+
+function onStampClick() {
+  if (stampState.stamped) {
+    // Ausstempeln direkt (GPS schon geprüft beim Einstempeln)
+    doStamp();
+  } else {
+    checkGPS();
+  }
+}
+
+function checkGPS() {
+  gpsStatus = 'checking';
+  render();
+  if (!navigator.geolocation) { gpsStatus='error'; render(); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const {latitude:lat, longitude:lng} = pos.coords;
+      const found = LOCATIONS.find(l => getDistance(lat,lng,l.lat,l.lng) <= l.radius);
+      if (found) {
+        stampState.nearbyLoc = found;
+        gpsStatus = 'allowed';
+      } else {
+        gpsStatus = 'denied';
+      }
+      render();
+    },
+    () => { gpsStatus='error'; render(); },
+    { enableHighAccuracy:true, timeout:12000 }
+  );
+}
+
+function doStamp() {
+  if (!stampState.stamped) {
+    stampState.stamped = true;
+    stampState.startTime = nowTime();
+    stampState.elapsed = 0;
+    gpsStatus = 'idle';
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => {
+      stampState.elapsed++;
+      const el = document.getElementById('elapsed-display');
+      if (el) el.textContent = fmtElapsed(stampState.elapsed);
+    }, 1000);
+  } else {
+    clearInterval(timer);
+    history.unshift({
+      date: new Date().toLocaleDateString('de-DE',{weekday:'short',day:'numeric',month:'short'}),
+      in: stampState.startTime, out: nowTime(),
+      h: fmtHours(stampState.elapsed),
+      loc: stampState.nearbyLoc?.name || '–', gps: true
+    });
+    saveHistory();
+    stampState.stamped = false; stampState.nearbyLoc = null;
+    gpsStatus = 'idle';
+  }
+  render();
+}
+
+// ── CHECK VIEW ────────────────────────────────────────────────────────────────
+let activeChecklist = null;
+
+function renderCheck() {
+  if (activeChecklist !== null) {
+    const cl = CHECKLISTS[activeChecklist];
+    const done = cl.items.filter((_,i) => checkState[`${activeChecklist}-${i}`]).length;
+    const pct = Math.round(done/cl.items.length*100);
+    const items = cl.items.map((item,i) => {
+      const key=`${activeChecklist}-${i}`, isDone=checkState[key];
+      return `<div class="check-item ${isDone?'done':''}" onclick="toggleCheck(${activeChecklist},${i})">
+        <div class="check-box ${isDone?'checked':''}">${isDone?'✓':''}</div>
+        <span style="color:${isDone?'var(--muted)':'var(--text)'};font-size:15px;${isDone?'text-decoration:line-through':''}">${item}</span>
+      </div>`;
+    }).join('');
+    return `
+      <button class="back-btn" onclick="activeChecklist=null;render()">‹ Zurück</button>
+      <div style="padding:0 16px">
+        <div style="font-weight:700;font-size:20px;margin-bottom:6px">${cl.title}</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="color:var(--muted);font-size:12px">${done}/${cl.items.length} erledigt</span>
+          <span style="color:var(--accent);font-size:12px;font-weight:700">${pct}%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        ${items}
+      </div>`;
+  }
+  const cards = CHECKLISTS.map((cl,i) => {
+    const done = cl.items.filter((_,j) => checkState[`${i}-${j}`]).length;
+    return `<div class="card" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="activeChecklist=${i};render()">
+      <div>
+        <div style="font-weight:600;font-size:16px">${cl.title}</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:4px">${done}/${cl.items.length} erledigt</div>
+      </div>
+      <span style="color:var(--accent);font-size:22px">›</span>
+    </div>`;
+  }).join('');
+  return `<div style="padding:16px"><div class="section-label">CHECKLISTEN</div>${cards}</div>`;
+}
+
+function toggleCheck(listIdx, itemIdx) {
+  const key=`${listIdx}-${itemIdx}`;
+  checkState[key] = !checkState[key];
+  render();
+}
+
+// ── GUIDE VIEW ────────────────────────────────────────────────────────────────
+let activeInstruction = null;
+
+function renderGuide() {
+  if (activeInstruction !== null) {
+    const ins = INSTRUCTIONS[activeInstruction];
+    const steps = ins.steps.map((s,i) => `
+      <div style="display:flex;gap:14px;margin-bottom:16px;align-items:flex-start">
+        <div class="step-num">${i+1}</div>
+        <div style="font-size:15px;padding-top:4px;line-height:1.6">${s}</div>
+      </div>`).join('');
+    return `
+      <button class="back-btn" onclick="activeInstruction=null;render()">‹ Zurück</button>
+      <div style="padding:0 16px">
+        <div class="tag" style="background:${ins.catColor}22;color:${ins.catColor}">${ins.cat.toUpperCase()}</div>
+        <div style="font-weight:700;font-size:22px;margin-bottom:20px">${ins.title}</div>
+        ${steps}
+      </div>`;
+  }
+  const cards = INSTRUCTIONS.map((ins,i) => `
+    <div class="card" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="activeInstruction=${i};render()">
+      <div>
+        <div class="tag" style="background:${ins.catColor}22;color:${ins.catColor}">${ins.cat.toUpperCase()}</div>
+        <div style="font-weight:600;font-size:16px">${ins.title}</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:4px">${ins.steps.length} Schritte</div>
+      </div>
+      <span style="color:var(--accent);font-size:22px">›</span>
+    </div>`).join('');
+  return `<div style="padding:16px"><div class="section-label">ARBEITSANWEISUNGEN</div>${cards}</div>`;
+}
+
+// ── TEAM VIEW ─────────────────────────────────────────────────────────────────
+function renderTeam() {
+  const activeCount = employees.filter(e=>e.active).length;
+  const cards = employees.map(em => `
+    <div class="card" style="display:flex;align-items:center;gap:14px">
+      <div style="width:46px;height:46px;border-radius:50%;background:rgba(0,200,150,.15);
+        border:2px solid ${em.active?'var(--accent)':'var(--muted)'};display:flex;align-items:center;
+        justify-content:center;color:${em.active?'var(--accent)':'var(--muted)'};font-weight:700;font-size:16px;flex-shrink:0">
+        ${em.name[0]}
+      </div>
+      <div style="flex:1">
+        <div style="font-weight:600;font-size:15px">${em.name}</div>
+        <div style="color:var(--muted);font-size:12px;margin-top:2px">${em.role}</div>
+      </div>
+      <div class="toggle ${em.active?'on':''}" onclick="toggleEmployee(${em.id})">
+        <div class="toggle-knob"></div>
+      </div>
+    </div>`).join('');
+  return `
+    <div style="padding:16px">
+      <div class="section-label">MITARBEITER – ${activeCount} AKTIV</div>
+      ${cards}
+      <button onclick="alert('Funktion kommt bald!')"
+        style="width:100%;padding:14px;border-radius:12px;background:transparent;
+        border:2px dashed var(--border);color:var(--muted);font-size:15px;cursor:pointer;margin-top:4px;font-family:inherit">
+        + Mitarbeiter hinzufügen
+      </button>
+    </div>`;
+}
+
+function toggleEmployee(id) {
+  employees = employees.map(e => e.id===id ? {...e, active:!e.active} : e);
+  render();
+}
+
+function attachEvents() {}
+
+// ── Service Worker (offline support) ─────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const sw = `
+    const CACHE='mc-v1';
+    self.addEventListener('install', e => e.waitUntil(
+      caches.open(CACHE).then(c => c.addAll(['./',location.href]))
+    ));
+    self.addEventListener('fetch', e => e.respondWith(
+      caches.match(e.request).then(r => r || fetch(e.request).catch(()=>r))
+    ));`;
+  const blob = new Blob([sw], {type:'text/javascript'});
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
